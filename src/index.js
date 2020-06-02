@@ -3,12 +3,20 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
-import ApolloClient from 'apollo-boost';
 import { ApolloProvider } from '@apollo/react-hooks';
+import { ApolloClient } from 'apollo-client'
+import { createHttpLink } from 'apollo-link-http'
+import { InMemoryCache } from 'apollo-cache-inmemory'
+
+const link = createHttpLink({
+  uri: 'https://staging.selfdetermine.net/graphql',
+  credentials: 'include'
+});
 
 const client = new ApolloClient({
-  uri: 'https://staging.selfdetermine.net/graphql',
-});
+  link,
+  cache: new InMemoryCache()
+})
 
 
 ReactDOM.render(

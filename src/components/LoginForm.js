@@ -1,6 +1,8 @@
 import React from 'react';
 import gql from 'graphql-tag';
-import { useMutation, useQuery } from '@apollo/react-hooks';
+import { useState } from 'react';
+import { useMutation, useLazyQuery } from '@apollo/react-hooks';
+import ApolloClient from 'apollo-boost';
 
 const LOGIN = gql`
   mutation ($c: AuthProviderCredentialsInput){
@@ -33,11 +35,44 @@ const GET_USER = gql`
 `;
 
 const LoginForm = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [errorText, setErrorText] = useState("");
+  const [user, setUser] = useState(null);
   let email;
   let password;
-  const [login, { data }] = useMutation(LOGIN);
 
-  // const { loading, error, userData } = useQuery(GET_USER);
+  const client = new ApolloClient({
+    uri: 'https://staging.selfdetermine.net/graphql',
+  });
+
+  const [login, { data }] = useMutation(LOGIN, {
+    client: client,
+    onCompleted(result) {
+      setLoading(false);
+      getUser();
+      //HACK: Spent too much time trying to get the authenticated call working, so I'm just getting the user data from the mutation response
+      // setUser(result.loginUser.user)
+    },
+    onError(err) {
+      setLoading(false);
+      setError(true);
+      if (err.graphQLErrors && err.graphQLErrors.length && err.graphQLErrors.message) {
+        setErrorText(err.graphQLErrors.message);
+      } else {
+        setErrorText("Login Error");
+      }
+    }
+  });
+
+  const [getUser, { userLoading, userData }] = useLazyQuery(GET_USER, {
+    onCompleted(result) {
+      debugger
+    },
+    onError(result) {
+      debugger
+    }  
+  });
 
     return (
       <section className="hero is-primary is-fullheight">
@@ -45,50 +80,66 @@ const LoginForm = () => {
           <div className="container">
             <div className="columns is-centered">
               <div className="column is-5-tablet is-4-desktop is-3-widescreen">
-                <form 
-                  className="box" 
-                  onSubmit={e => {
-                    e.preventDefault();
-                    debugger
-                    login({ variables: { "c": {
-                      "email": email.value,
-                      "password": password.value
-                      }}
-                    });
-                  }}
-                >
-                  <div className="field">
-                    <label htmlFor="userName" className="label">Email</label>
-                    <div className="control">
-                      <input
-                        type="email" 
-                        ref={node => {
-                          email = node;
+                {
+                  error &&
+                  <div className="notification is-danger has-text-centered">
+                    <button className="delete" onClick={() => setError(false)}></button>        
+                    {errorText} 
+                  </div>
+                }
+                {
+                  user &&
+                  <div className="box" >
+                    user
+                  </div>
+                }
+                {
+                  !user &&
+                  <form 
+                    className="box" 
+                    onSubmit={e => {
+                      setLoading(true)
+                      e.preventDefault();
+                      login({ variables: { "c": {
+                        "email": email.value,
+                        "password": password.value
                         }}
-                        placeholder="user@gmail.com" 
-                        className="input" 
-                        required/>
+                      });
+                    }}
+                  >
+                    <div className="field">
+                      <label htmlFor="userName" className="label">Email</label>
+                      <div className="control">
+                        <input
+                          type="email" 
+                          ref={node => {
+                            email = node;
+                          }}
+                          placeholder="user@gmail.com" 
+                          className="input" 
+                          required/>
+                      </div>
                     </div>
-                  </div>
-                  <div className="field">
-                    <label htmlFor="password" className="label">Password</label>
-                    <div className="control">
-                      <input 
-                        type="password" 
-                        ref={node => {
-                          password = node;
-                        }}
-                        placeholder="*******" 
-                        className="input" 
-                        required/>
+                    <div className="field">
+                      <label htmlFor="password" className="label">Password</label>
+                      <div className="control">
+                        <input 
+                          type="password" 
+                          ref={node => {
+                            password = node;
+                          }}
+                          placeholder="*******" 
+                          className="input" 
+                          required/>
+                      </div>
                     </div>
-                  </div>
-                  <div className="field">
-                    <button className="button is-success">
-                      Login
-                    </button>
-                  </div>
-                </form>
+                    <div className="field has-text-centered">
+                      <button className={loading ? "button is-success is-loading" : "button is-success"}>
+                        Login
+                      </button>
+                    </div>
+                  </form>
+                }
               </div>
             </div>
           </div>
