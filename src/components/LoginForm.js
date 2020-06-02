@@ -49,10 +49,7 @@ const LoginForm = () => {
   const [login, { data }] = useMutation(LOGIN, {
     client: client,
     onCompleted(result) {
-      setLoading(false);
       getUser();
-      //HACK: Spent too much time trying to get the authenticated call working, so I'm just getting the user data from the mutation response
-      // setUser(result.loginUser.user)
     },
     onError(err) {
       setLoading(false);
@@ -64,13 +61,14 @@ const LoginForm = () => {
       }
     }
   });
-
+  
   const [getUser, { userLoading, userData }] = useLazyQuery(GET_USER, {
     onCompleted(result) {
-      debugger
+      setLoading(false);
+      setUser(result.loginUser.user)
     },
     onError(result) {
-      debugger
+      setLoading(false);
     }  
   });
 
@@ -90,7 +88,10 @@ const LoginForm = () => {
                 {
                   user &&
                   <div className="box" >
-                    user
+                    User Email: {user.email}
+                    {user.roles.map((role) => (
+                      <ul>{role.name}</ul>
+                    ))}
                   </div>
                 }
                 {
